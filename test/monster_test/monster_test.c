@@ -1031,6 +1031,46 @@ int test_monster(flatcc_builder_t *B)
     return ret;
 }
 
+int test_monster_pick_copy(flatcc_builder_t *B)
+{
+    void *buffer;
+    size_t size;
+    int ret;
+
+    gen_monster(B, 0);
+
+    buffer = flatcc_builder_finalize_aligned_buffer(B, &size);
+    hexdump("monster table", buffer, size, stderr);
+    if ((ret = ns(Monster_verify_as_root(buffer, size)))) {
+        printf("Monster buffer failed to verify, got: %s\n", flatcc_verify_error_string(ret));
+        return -1;
+    }
+    ret = verify_monster(buffer);
+
+    ns(Monster_table_t) src_monster;
+    src_monster = ns(Monster_as_root(buffer));
+
+    flatcc_builder_t copyBuilder, *CB;
+    CB = &copyBuilder;
+
+    flatcc_builder_init(CB);
+    flatcc_builder_reset(CB);
+
+    int hp = ns(Monster_hp(src_monster));
+    printf("HP %d\n", hp);
+
+    // Crash here. Is this incorrect usage?
+    ns(Monster_hp_pick(CB, src_monster));
+
+    //ns(Monster_testarrayofstring_pick(CB, src_monster));
+    //ns(Monster_testempty_pick(CB, src_monster));
+    //ns(Monster_testarrayoftables_pick(CB, src_monster));
+    //ns(Monster_testarrayofbools_pick(CB, src_monster));
+
+    aligned_free(buffer);
+    return ret;
+}
+
 int test_monster_with_size(flatcc_builder_t *B)
 {
     void *buffer, *frame;
@@ -2667,6 +2707,12 @@ int main(int argc, char *argv[])
 #endif
 #if 1
     if (test_monster(B)) {
+        printf("TEST FAILED\n");
+        return -1;
+    }
+#endif
+#if 1
+    if (test_monster_pick_copy(B)) {
         printf("TEST FAILED\n");
         return -1;
     }
